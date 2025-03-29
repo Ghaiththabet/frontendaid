@@ -1,0 +1,131 @@
+<div>
+  <!-- Left Sidebar -->
+  <aside
+    id="leftsidebar"
+    class="sidebar"
+    (mouseenter)="mouseHover()"
+    (mouseleave)="mouseOut()"
+  >
+    <!-- Menu -->
+    <div class="menu">
+      <!-- Si vous utilisez ng-scrollbar, gardez ce composant -->
+      <ng-scrollbar [style.height]="listMaxHeight + 'px'" visibility="hover">
+        <ul class="list">
+          <!-- Bloc d'informations utilisateur (en haut de la sidebar) -->
+          <li class="sidebar-user-panel">
+            <div class="user-panel">
+              <div class="image">
+                <!-- Image utilisateur -->
+                <img
+                  [src]="userImg"
+                  class="img-circle user-img-circle"
+                  alt="User Image"
+                />
+              </div>
+            </div>
+            <div class="profile-usertitle">
+              <div class="sidebar-userpic-name">{{ userFullName }}</div>
+              <div class="profile-usertitle-job">{{ userType }}</div>
+            </div>
+          </li>
+
+          <!-- Boucle principale sur les éléments de menu -->
+          <li
+            *ngFor="let item of sidebarItems"
+            [routerLinkActive]="item.submenu.length > 0 ? 'active' : 'active-top'"
+          >
+            <!-- Si c'est un groupTitle, on affiche un simple titre (pas de lien) -->
+            <div class="header" *ngIf="item.groupTitle">
+              {{ item.title }}
+            </div>
+
+            <!-- Sinon, c'est un item cliquable -->
+            <ng-container *ngIf="!item.groupTitle">
+              <a
+                [routerLink]="item.submenu.length === 0 ? [item.path] : null"
+                [ngClass]="[item.class]"
+                (click)="callToggleMenu($event, item.submenu.length)"
+                class="menu-top"
+              >
+                <!-- Exemple d'icône si vous utilisez FeatherIcons
+                     <i-feather [name]="item.icon" class="sidebarIcon"></i-feather>
+                     ou un simple <i [ngClass]="item.icon"></i> -->
+                <span class="hide-menu">{{ item.title }}</span>
+
+                <!-- Badge éventuel -->
+                <span
+                  *ngIf="item.badge"
+                  [ngClass]="[item.badgeClass]"
+                >
+                  {{ item.badge }}
+                </span>
+              </a>
+
+              <!-- Sous-menu de 1er niveau -->
+              <ul class="ml-menu" *ngIf="item.submenu.length > 0">
+                <li
+                  *ngFor="let sub1 of item.submenu"
+                  [routerLinkActive]="sub1.submenu.length > 0 ? '' : 'active'"
+                >
+                  <a
+                    [routerLink]="sub1.submenu.length > 0 ? null : [sub1.path]"
+                    (click)="callToggleMenu($event, sub1.submenu.length)"
+                    [ngClass]="[sub1.class]"
+                  >
+                    {{ sub1.title }}
+                  </a>
+
+                  <!-- Sous-menu de 2e niveau -->
+                  <ul class="ml-menu-2" *ngIf="sub1.submenu.length > 0">
+                    <li
+                      *ngFor="let sub2 of sub1.submenu"
+                      [routerLinkActive]="sub2.submenu.length > 0 ? '' : 'active'"
+                    >
+                      <a
+                        [routerLink]="sub2.submenu.length > 0 ? null : [sub2.path]"
+                        (click)="callToggleMenu($event, sub2.submenu.length)"
+                        [ngClass]="[sub2.class]"
+                      >
+                        {{ sub2.title }}
+                      </a>
+
+                      <!-- Sous-menu de 3e niveau -->
+                      <ul class="ml-menu-3" *ngIf="sub2.submenu.length > 0">
+                        <li
+                          *ngFor="let sub3 of sub2.submenu"
+                          [routerLinkActive]="sub3.submenu.length > 0 ? '' : 'active'"
+                        >
+                          <a
+                            [routerLink]="sub3.submenu.length > 0 ? null : [sub3.path]"
+                            (click)="callToggleMenu($event, sub3.submenu.length)"
+                            [ngClass]="[sub3.class]"
+                          >
+                            {{ sub3.title }}
+                          </a>
+                        </li>
+                      </ul>
+                      <!-- Fin 3e niveau -->
+                    </li>
+                  </ul>
+                  <!-- Fin 2e niveau -->
+                </li>
+              </ul>
+              <!-- Fin 1er niveau -->
+            </ng-container>
+          </li>
+
+          <!-- Optionnel : bouton de déconnexion en bas de la liste -->
+          <li>
+            <a (click)="logout()" class="menu-top">
+              <!-- Exemple d'icône
+              <i-feather name="log-out" class="sidebarIcon"></i-feather> -->
+              <span class="hide-menu">Logout</span>
+            </a>
+          </li>
+        </ul>
+      </ng-scrollbar>
+    </div>
+    <!-- #Menu -->
+  </aside>
+  <!-- #END# Left Sidebar -->
+</div>
