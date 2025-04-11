@@ -14,6 +14,14 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+interface TrainingDTO {
+  trainingId: number;
+  trainingName: string;
+  trainingType: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+}
 interface TrainerInfo {
   name: string;
   lastName: string;

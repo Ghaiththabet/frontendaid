@@ -52,6 +52,11 @@ export const ADMIN_ROUTE: Route[] = [
       .then(m => m.PAYROLL_ROUTE)
   },
   {
+    path: 'perks',
+    loadChildren: () => import('./perks/perks.routes')
+      .then(m => m.PERKS_ROUTES)
+  },
+  {
     path: 'leads',
     loadChildren: () => import('./leads/leads.routes')
       .then(m => m.LEADS_ROUTE)
@@ -70,5 +75,10 @@ export const ADMIN_ROUTE: Route[] = [
     path: 'reports',
     loadChildren: () => import('./reports/reports.routes')
       .then(m => m.REPORT_ROUTE)
+  },
+  {
+    path: 'expenses',
+    loadChildren: () => import('./expenses/expenses.routes')
+      .then(m => m.EXPENSES_ROUTES)
   }
 ];

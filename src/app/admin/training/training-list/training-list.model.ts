@@ -26,3 +26,23 @@ export interface TrainerInfo {
   startDate: string;
   endDate: string;
 }
+export interface TrainingDTO {
+  trainingId: number;
+  trainingName: string;
+  trainingType: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+}
+export interface EmployeeSalary {
+  payrollId?: number;
+  employeeId: number;
+  employeeName?: string;
+  employeeEmail?: string;
+  employeeDepartment?: string;
+  basicSalary: number;
+  bonuses: number;
+  deductions: number;
+  totalSalary: number;
+  payDate: string;
+}

@@ -1,16 +1,20 @@
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   OnDestroy,
   OnInit,
   ViewChild,
 } from '@angular/core';
-import { TodayService } from './today.service';
-import { HttpClient } from '@angular/common/http';
-import { MatDialog } from '@angular/material/dialog';
+// --- IMPORTS MODIFIÉS ---
+import { EntreeDeTempsService } from '../../../services/entree-de-temps.service'; // CHEMIN VERS VOTRE NOUVEAU SERVICE
+import { EntreeDeTempsDTO } from 'app/models/entree-de-temps.dto';          // CHEMIN VERS VOTRE MODÈLE DTO
+import { Status as PointageStatus } from 'app/models/status.enum'; // Renommer Status pour éviter conflit potentiel
+// -----------------------
+import { HttpClient } from '@angular/common/http'; // Gardé si utilisé ailleurs, sinon potentiellement retirable
+import { MatDialog } from '@angular/material/dialog'; // Gardé si vous voulez des dialogs pour d'autres actions
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
-import { Today } from './today.model';
 import {
   MatSnackBar,
   MatSnackBarHorizontalPosition,
@@ -19,10 +23,9 @@ import {
 import { MatMenuTrigger, MatMenuModule } from '@angular/material/menu';
 import { Subject } from 'rxjs';
 import { SelectionModel } from '@angular/cdk/collections';
-import { rowsAnimation } from '@shared';
-import { Direction } from '@angular/cdk/bidi';
-import { TableExportUtil } from '@shared';
-import { NgClass } from '@angular/common';
+import { rowsAnimation } from '@shared'; // Gardé pour animation
+import { TableExportUtil } from '@shared'; // Gardé pour export
+import { DatePipe, NgClass } from '@angular/common'; // Import DatePipe
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRippleModule } from '@angular/material/core';
 import { FeatherIconsComponent } from '@shared/components/feather-icons/feather-icons.component';
@@ -34,13 +37,16 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BreadcrumbComponent } from '@shared/components/breadcrumb/breadcrumb.component';
 import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
-import { TodayFormComponent } from './dialog/form-dialog/form-dialog.component';
-import { TodayDeleteComponent } from './dialog/delete/delete.component';
+// --- IMPORTS SUPPRIMÉS (pour Dialogs) ---
+// import { TodayFormComponent } from './dialog/form-dialog/form-dialog.component';
+// import { TodayDeleteComponent } from './dialog/delete/delete.component';
+// -----------------------------------
 
 @Component({
-  selector: 'app-today',
+  selector: 'app-today', // Le sélecteur reste le même
   templateUrl: './today.component.html',
-  styleUrls: ['./today.component.scss'],
+  styleUrls: ['./today.component.scss'], // Les styles restent les mêmes
+  standalone: true, // Correction : mise à standalone=true et imports ici
   animations: [rowsAnimation],
   imports: [
     BreadcrumbComponent,
@@ -58,24 +64,33 @@ import { TodayDeleteComponent } from './dialog/delete/delete.component';
     MatProgressSpinnerModule,
     MatMenuModule,
     MatPaginatorModule,
+    DatePipe, // Ajouter DatePipe ici
   ],
 })
 export class TodayComponent implements OnInit, OnDestroy {
+  // --- NOUVELLES DÉFINITIONS DE COLONNES ---
   columnDefinitions = [
-    { def: 'select', label: 'Checkbox', type: 'check', visible: true },
+    // { def: 'select', label: 'Checkbox', type: 'check', visible: true }, // Gardons la sélection ? Peut-être pas utile ici. A discuter.
     { def: 'id', label: 'ID', type: 'number', visible: false },
-    { def: 'name', label: 'Employee Name', type: 'text', visible: true },
-    { def: 'first_in', label: 'First In', type: 'time', visible: true },
-    { def: 'break', label: 'Break', type: 'text', visible: true },
-    { def: 'last_out', label: 'Last Out', type: 'time', visible: true },
-    { def: 'total', label: 'Total Hours', type: 'text', visible: true },
-    { def: 'status', label: 'Status', type: 'text', visible: true },
-    { def: 'shift', label: 'Shift', type: 'text', visible: true },
-    { def: 'actions', label: 'Actions', type: 'actionBtn', visible: true },
+    { def: 'employeeFullName', label: 'Employé', type: 'text', visible: true },
+    { def: 'typeEntreeDeTemps', label: 'Type', type: 'text', visible: true },
+    { def: 'heureDebut', label: 'Début', type: 'datetime', visible: true },
+    { def: 'heureFin', label: 'Fin', type: 'datetime', visible: true },
+    { def: 'dureeNetteMinutes', label: 'Durée Trav.', type: 'duration', visible: true },
+    { def: 'dureePauseMinutes', label: 'Durée Pause', type: 'duration', visible: true },
+    { def: 'status', label: 'Statut', type: 'enum', visible: false },
+    { def: 'notes', label: 'Notes', type: 'text', visible: true }, // Masqué par défaut
+    { def: 'localisationDebutAdresse', label: 'Adresse Début', type: 'address', visible: true },
+    // Actions supprimées pour l'instant
+    // { def: 'actions', label: 'Actions', type: 'actionBtn', visible: true },
   ];
+  // Statut Pointage Renommé
+  PointageStatusEnum = PointageStatus; // Exposer l'enum au template si besoin avec alias
 
-  dataSource = new MatTableDataSource<Today>([]);
-  selection = new SelectionModel<Today>(true, []);
+  // --- TYPES MIS À JOUR ---
+  dataSource = new MatTableDataSource<EntreeDeTempsDTO>([]);
+  selection = new SelectionModel<EntreeDeTempsDTO>(true, []); // Sélection peut ne plus être pertinente
+  // --------------------
   contextMenuPosition = { x: '0px', y: '0px' };
   isLoading = true;
   private destroy$ = new Subject<void>();
@@ -84,12 +99,18 @@ export class TodayComponent implements OnInit, OnDestroy {
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('filter') filter!: ElementRef;
   @ViewChild(MatMenuTrigger) contextMenu?: MatMenuTrigger;
+  // Garder le ViewChild pour pouvoir ouvrir le select
+  @ViewChild('select') columnSelect!: ElementRef<HTMLSelectElement>;
 
   constructor(
-    public httpClient: HttpClient,
-    public dialog: MatDialog,
-    public todayService: TodayService,
-    private snackBar: MatSnackBar
+    public httpClient: HttpClient, // Gardé mais peut-être inutile
+    public dialog: MatDialog, // Gardé mais peut-être inutile sans CRUD dialogs
+    // --- INJECTION SERVICE MODIFIÉE ---
+    public entreeDeTempsService: EntreeDeTempsService,
+    // -------------------------------
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef // Injectez ChangeDetectorRef
+
   ) {}
 
   ngOnInit() {
@@ -105,31 +126,69 @@ export class TodayComponent implements OnInit, OnDestroy {
     this.loadData();
   }
 
+  // Ne change pas
   getDisplayedColumns(): string[] {
     return this.columnDefinitions
       .filter((cd) => cd.visible)
       .map((cd) => cd.def);
   }
-
+ 
+ 
+  // La fonction (ngModelChange) n'est plus nécessaire, mais on peut forcer un re-render
+  // après la sélection pour que la table se mette à jour si on utilise OnPush.
+  onColumnVisibilityChange() {
+     console.log("Visibility changed, triggering CD");
+     this.cdr.detectChanges(); // Forcer la détection si OnPush
+     // Vous pourriez sauvegarder l'état des colonnes dans le localStorage ici
+  }
+  // --- MÉTHODE loadData MODIFIÉE ---
   loadData() {
-    this.todayService.getAllTodays().subscribe({
-      next: (data) => {
-        this.dataSource.data = data;
-        this.isLoading = false;
-        this.refreshTable();
-        this.dataSource.filterPredicate = (data: Today, filter: string) =>
-          Object.values(data).some((value) =>
-            value.toString().toLowerCase().includes(filter)
-          );
+    this.isLoading = true; // Afficher le spinner
+    this.entreeDeTempsService.getAllPointages().subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Mapper pour formater potentiellement certaines données si nécessaire ici
+          // Ex: Convertir les minutes en hh:mm ? Non, faisons ça dans le template
+          this.dataSource.data = response.data || []; // Assurer un tableau vide si data est null/undefined
+          this.refreshTable(); // Mettre à jour pagination/tri après MAJ data
+        } else {
+          console.error('Erreur API lors du chargement des pointages:', response.message);
+          this.showNotification('snackbar-danger', response.message || 'Erreur chargement données', 'bottom', 'center');
+          this.dataSource.data = []; // Vider le tableau en cas d'erreur API
+        }
+        this.isLoading = false; // Cacher le spinner
+        // Filtre prédicat (gardé, devrait fonctionner)
+        this.dataSource.filterPredicate = (data: EntreeDeTempsDTO, filter: string) => {
+             const dataStr = JSON.stringify(data).toLowerCase();
+             return dataStr.indexOf(filter) !== -1;
+        };
       },
-      error: (err) => console.error(err),
+      error: (err) => {
+        console.error('Erreur HTTP lors du chargement des pointages:', err);
+        this.showNotification('snackbar-danger', `Erreur HTTP: ${err.message || 'Erreur inconnue'}`, 'bottom', 'center');
+        this.isLoading = false; // Cacher le spinner
+        this.dataSource.data = []; // Vider le tableau en cas d'erreur HTTP
+      },
     });
   }
+  // -----------------------------
 
   private refreshTable() {
-    this.paginator.pageIndex = 0;
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    // Assurer que paginator et sort sont disponibles
+    if (this.dataSource.data.length > 0) {
+       if (this.paginator) {
+           this.paginator.pageIndex = 0; // Reset page index
+           this.dataSource.paginator = this.paginator;
+       }
+       if (this.sort) {
+           this.dataSource.sort = this.sort;
+       }
+    } else {
+        this.dataSource.paginator = null; // Détacher si pas de données
+        this.dataSource.sort = null;
+    }
+    // Pour forcer la MaJ de la source après changement de data
+    this.dataSource._updateChangeSubscription();
   }
 
   applyFilter(event: Event) {
@@ -137,111 +196,94 @@ export class TodayComponent implements OnInit, OnDestroy {
       .trim()
       .toLowerCase();
     this.dataSource.filter = filterValue;
+    if (this.dataSource.paginator) {
+        this.dataSource.paginator.firstPage(); // Retour à la première page sur filtre
+    }
   }
 
+  // --- Fonctions CRUD supprimées ou commentées ---
+  /*
   addNew() {
-    this.openDialog('add');
+    // Plus pertinent ici, le pointage se fait via le header
+    // Si vous voulez ajouter/modifier manuellement => nouveau dialogue + service backend
+     this.showNotification('snackbar-warning', 'Action non disponible ici.', 'bottom', 'center');
   }
 
-  editCall(row: Today) {
-    this.openDialog('edit', row);
+  editCall(row: EntreeDeTempsDTO) {
+    // Idem, édition manuelle nécessite dialogue + backend
+     this.showNotification('snackbar-warning', 'Action non disponible ici.', 'bottom', 'center');
   }
 
-  openDialog(action: 'add' | 'edit', data?: Today) {
-    let varDirection: Direction;
-    if (localStorage.getItem('isRtl') === 'true') {
-      varDirection = 'rtl';
-    } else {
-      varDirection = 'ltr';
-    }
-    const dialogRef = this.dialog.open(TodayFormComponent, {
-      width: '60vw',
-      maxWidth: '100vw',
-      data: { today: data, action },
-      direction: varDirection,
-      autoFocus: false,
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        if (action === 'add') {
-          this.dataSource.data = [result, ...this.dataSource.data];
-        } else {
-          this.updateRecord(result);
-        }
-        this.refreshTable();
-        this.showNotification(
-          action === 'add' ? 'snackbar-success' : 'black',
-          `${action === 'add' ? 'Add' : 'Edit'} Record Successfully...!!!`,
-          'bottom',
-          'center'
-        );
-      }
-    });
+  deleteItem(row: EntreeDeTempsDTO) {
+    // Suppression individuelle possible si vous ajoutez endpoint backend et méthode service
+    // Pour l'instant, utilisez deleteAll via un autre bouton admin si nécessaire
+     this.showNotification('snackbar-warning', 'Action non disponible ici.', 'bottom', 'center');
   }
 
-  private updateRecord(updatedRecord: Today) {
-    const index = this.dataSource.data.findIndex(
-      (record) => record.id === updatedRecord.id
-    );
-    if (index !== -1) {
-      this.dataSource.data[index] = updatedRecord;
-      this.dataSource._updateChangeSubscription();
-    }
+  removeSelectedRows() {
+    // Suppression en masse non prévue pour l'instant
+    this.showNotification('snackbar-warning', 'Action non disponible ici.', 'bottom', 'center');
   }
+  */
+  // ------------------------------------------
 
-  deleteItem(row: Today) {
-    const dialogRef = this.dialog.open(TodayDeleteComponent, {
-      data: row,
-    });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.dataSource.data = this.dataSource.data.filter(
-          (record) => record.id !== row.id
-        );
-        this.refreshTable();
-        this.showNotification(
-          'snackbar-danger',
-          'Delete Record Successfully...!!!',
-          'bottom',
-          'center'
-        );
-      }
-    });
-  }
-
-  showNotification(
+  showNotification( // Gardée car utilisée dans loadData
     colorName: string,
     text: string,
     placementFrom: MatSnackBarVerticalPosition,
     placementAlign: MatSnackBarHorizontalPosition
   ) {
     this.snackBar.open(text, '', {
-      duration: 2000,
+      duration: 3000, // Augmenter durée?
       verticalPosition: placementFrom,
       horizontalPosition: placementAlign,
       panelClass: colorName,
     });
   }
 
+  // --- EXPORT MODIFIÉ ---
   exportExcel() {
+     // Vérifier qu'il y a des données filtrées
+     if (!this.dataSource.filteredData || this.dataSource.filteredData.length === 0) {
+        this.showNotification('snackbar-warning', 'Aucune donnée à exporter.', 'bottom', 'center');
+        return;
+     }
+     // Utiliser DatePipe pour formater
+     const datePipe = new DatePipe('en-US'); // Ou 'fr-FR' etc.
+     const formatDateTime = (dateString: string | undefined | null): string => {
+         return dateString ? datePipe.transform(dateString, 'yyyy-MM-dd HH:mm') || '' : '';
+     };
+     const formatDuration = (minutes: number | undefined | null): string => {
+        if (minutes === undefined || minutes === null) return '';
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${h}h ${m}m`;
+     };
+
+
     const exportData = this.dataSource.filteredData.map((x) => ({
       ID: x.id,
-      Image: x.img,
-      'Employee Name': x.name,
-      'First In': x.first_in,
-      Break: x.break,
-      'Last Out': x.last_out,
-      'Total Hours': x.total,
-      Status: x.status,
-      Shift: x.shift,
+      Employé: x.employeeFullName,
+      Type: x.typeEntreeDeTemps,
+      Début: formatDateTime(x.heureDebut),
+      Fin: formatDateTime(x.heureFin),
+      'Durée Trav.': formatDuration(x.dureeNetteMinutes),
+      'Durée Pause': formatDuration(x.dureePauseMinutes),
+      Statut: x.status,
+      Notes: x.notes || '', // Mettre '' si null/undefined
+      Mode: x.restrictionsHorloge,
+      // Ajoutez d'autres champs si besoin (localisation, etc.)
     }));
 
-    TableExportUtil.exportToExcel(exportData, 'attendance_export');
+    TableExportUtil.exportToExcel(exportData, 'pointages_export');
   }
+  // ----------------------
 
+  // --- Gestion Sélection (Gardée mais peut-être inutile) ---
   isAllSelected() {
-    return this.selection.selected.length === this.dataSource.data.length;
+    const numSelected = this.selection.selected.length;
+    const numRows = this.dataSource.data.length;
+    return numSelected === numRows;
   }
 
   masterToggle() {
@@ -249,30 +291,26 @@ export class TodayComponent implements OnInit, OnDestroy {
       ? this.selection.clear()
       : this.dataSource.data.forEach((row) => this.selection.select(row));
   }
+  // -----------------------------------------------------
 
-  removeSelectedRows() {
-    const totalSelect = this.selection.selected.length;
-    this.dataSource.data = this.dataSource.data.filter(
-      (item) => !this.selection.selected.includes(item)
-    );
-    this.selection.clear();
-    this.showNotification(
-      'snackbar-danger',
-      `${totalSelect} Record(s) Deleted Successfully...!!!`,
-      'bottom',
-      'center'
-    );
-  }
-  onContextMenu(event: MouseEvent, item: Today) {
+  // --- Menu Contextuel Simplifié ---
+  onContextMenu(event: MouseEvent, item: EntreeDeTempsDTO) {
     event.preventDefault();
     this.contextMenuPosition = {
       x: `${event.clientX}px`,
       y: `${event.clientY}px`,
     };
     if (this.contextMenu) {
-      this.contextMenu.menuData = { item };
+      this.contextMenu.menuData = { item }; // Passer l'item au menu
       this.contextMenu.menu?.focusFirstItem('mouse');
       this.contextMenu.openMenu();
     }
   }
+   // Ajoutez ici des actions spécifiques pour le menu contextuel si nécessaire
+   viewDetails(item: EntreeDeTempsDTO) {
+      // Ouvrir un dialogue affichant TOUS les détails de l'item ?
+      console.log("Voir détails pour:", item);
+      alert(`Détails pour ID ${item.id}\nEmployé: ${item.employeeFullName}\nStatut: ${item.status}\nNotes: ${item.notes || 'Aucune'}`);
+   }
+  // -------------------------------
 }

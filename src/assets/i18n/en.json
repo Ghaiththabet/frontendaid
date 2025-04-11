@@ -154,6 +154,19 @@
     },
     "CONTACTS": {
       "TEXT": "Contacts"
+    },
+    "PERKS": {
+      "TEXT": "Perks",
+      "LIST": {
+        "ALL-PERKS": "All Perks",
+        "ADD-PERKS": "Add Perks"
+      }
+    },
+    "EXPENSES": {
+      "TEXT": "Expenses",
+      "LIST": {
+        "ALL-EXPENSES": "All Expenses"
+      }
     }
   }
 }

@@ -1882,6 +1882,68 @@
           "submenu": []
         }
       ]
+    },
+    {
+      "path": "",
+      "title": "MENUITEMS.PERKS.TEXT",
+      "iconType": "feather",
+      "icon": "gift",
+      "class": "menu-toggle",
+      "groupTitle": false,
+      "badge": "",
+      "badgeClass": "",
+      "role": ["Admin"],
+      "submenu": [
+        {
+          "path": "/admin/perks/all-perks",
+          "title": "MENUITEMS.PERKS.LIST.ALL-PERKS",
+          "iconType": "",
+          "icon": "",
+          "class": "ml-menu",
+          "groupTitle": false,
+          "badge": "",
+          "badgeClass": "",
+          "role": [""],
+          "submenu": []
+        },
+        {
+          "path": "/admin/perks/add-perks",
+          "title": "MENUITEMS.PERKS.LIST.ADD-PERKS",
+          "iconType": "",
+          "icon": "",
+          "class": "ml-menu",
+          "groupTitle": false,
+          "badge": "",
+          "badgeClass": "",
+          "role": [""],
+          "submenu": []
+        }
+      ]
+    },
+    {
+      "path": "",
+      "title": "MENUITEMS.EXPENSES.TEXT",
+      "iconType": "feather",
+      "icon": "credit-card",
+      "class": "menu-toggle",
+      "groupTitle": false,
+      "badge": "",
+      "badgeClass": "",
+      "role": ["Admin"],
+      "submenu": [
+        {
+          "path": "/admin/expenses",
+          "title": "MENUITEMS.EXPENSES.LIST.ALL-EXPENSES",
+          "iconType": "",
+          "icon": "",
+          "class": "ml-menu",
+          "groupTitle": false,
+          "badge": "",
+          "badgeClass": "",
+          "role": [""],
+          "submenu": []
+        }
+      ]
     }
   ]
 }

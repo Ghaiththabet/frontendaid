@@ -1,50 +1,50 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import {
   UntypedFormBuilder,
   UntypedFormGroup,
   Validators,
-  FormsModule,
-  ReactiveFormsModule,
 } from '@angular/forms';
+import { DepartmentService } from 'app/admin/departments/all-departments/department.service';
+import { PolicyService } from 'app/admin/departments/all-departments/policy.service';
+import { TrainingService } from 'app/admin/departments/all-departments/training.service';
+import { Department } from 'app/admin/departments/all-departments/department.model';
+import { Policy } from 'app/admin/departments/all-departments/department.model';
+import { Training } from 'app/admin/departments/all-departments/department.model';
+
+// Ajoutez cet import pour le composant Breadcrumb
+import { BreadcrumbComponent } from '@shared/components/breadcrumb/breadcrumb.component'; 
+
 import { MatButtonModule } from '@angular/material/button';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatOptionModule } from '@angular/material/core';
-import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { BreadcrumbComponent } from '@shared/components/breadcrumb/breadcrumb.component';
+import { MatSelectModule } from '@angular/material/select';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 @Component({
-    selector: 'app-edit-department',
-    templateUrl: './edit-department.component.html',
-    styleUrls: ['./edit-department.component.scss'],
-    imports: [
-        BreadcrumbComponent,
-        FormsModule,
-        ReactiveFormsModule,
-        MatFormFieldModule,
-        MatSelectModule,
-        MatOptionModule,
-        MatInputModule,
-        MatIconModule,
-        MatDatepickerModule,
-        MatButtonModule,
-    ]
+  selector: 'app-edit-department',
+  templateUrl: './edit-department.component.html',
+  styleUrls: ['./edit-department.component.scss'],
+  standalone: true,
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    BreadcrumbComponent,
+  ],
 })
-export class EditDepartmentComponent {
+export class EditDepartmentComponent implements OnInit {
   departmentForm: UntypedFormGroup;
-  formdata = {
-    id: 1, // Assuming the department has an id
-    img: 'path/to/image.jpg', // Assuming image is a string (could be a URL or path)
-    department_name: 'Software Development', // Department name
-    hod: 'Sanjay Shah', // Head of department
-    phone: '123456789', // Phone number
-    email: 'test@example.com', // Email address
-    employee_capacity: '230', // Employee capacity
-    establishedYear: '1987-02-17T14:22:18Z', // Date (ISO format)
-    totalEmployees: '50', // Total employees
-  };
+  departments: Department[] = [];  // Liste des départements
+  department!: Department;
+  policies: Policy[] = [];
+  trainings: Training[] = [];
 
   breadscrums = [
     {
@@ -53,43 +53,71 @@ export class EditDepartmentComponent {
       active: 'Edit',
     },
   ];
-  constructor(private fb: UntypedFormBuilder) {
-    this.departmentForm = this.createContactForm();
+
+  constructor(
+    private fb: UntypedFormBuilder,
+    private departmentService: DepartmentService,
+    private policyService: PolicyService,
+    private trainingService: TrainingService
+  ) {
+    this.departmentForm = this.fb.group({});
   }
-  onSubmit() {
-    console.log('Form Value', this.departmentForm.value);
+
+  ngOnInit(): void {
+    this.loadDepartments(); // Charger la liste des départements
   }
-  createContactForm(): UntypedFormGroup {
-    return this.fb.group({
-      id: [this.formdata.id], // The ID is not validated
-      img: [this.formdata.img], // The image path doesn't require validation
 
-      // Department Name with required validation
-      department_name: [this.formdata.department_name, [Validators.required]],
-
-      // Head of Department (HOD) with required validation
-      hod: [this.formdata.hod, [Validators.required]],
-
-      // Phone with required validation
-      phone: [this.formdata.phone, [Validators.required]],
-
-      // Email with required, email format, and minimum length validation
-      email: [
-        this.formdata.email,
-        [Validators.required, Validators.email, Validators.minLength(5)],
-      ],
-
-      // Employee Capacity with required validation
-      employee_capacity: [
-        this.formdata.employee_capacity,
-        [Validators.required],
-      ],
-
-      // Established Year with required validation
-      establishedYear: [this.formdata.establishedYear, [Validators.required]],
-
-      // Total Employees with required validation
-      totalEmployees: [this.formdata.totalEmployees, [Validators.required]],
+  private loadDepartments() {
+    this.departmentService.getAllDepartments().subscribe((departments) => {
+      this.departments = departments;
     });
+  }
+
+  onDepartmentChange(departmentId: number) {
+    this.departmentService.getDepartmentById(departmentId).subscribe((data) => {
+      this.department = data;
+      this.initializeForm();
+    });
+
+    this.loadPolicies(departmentId);
+    this.loadTrainings(departmentId);
+  }
+
+  private initializeForm() {
+    this.departmentForm = this.fb.group({
+      departmentId: [this.department.departmentId],
+      departmentName: [this.department.departmentName, [Validators.required]],
+      phone: [this.department.phone, [Validators.required]],
+      emailDept: [this.department.emailDept, [Validators.required, Validators.email]],
+      employeeIds: [this.department.employeeIds || []],
+      trainingIds: [this.department.trainingIds || []],
+      policyIds: [this.department.policyIds || []],
+    });
+  }
+
+  private loadPolicies(departmentId: number) {
+    this.policyService.getPoliciesByDepartmentId(departmentId).subscribe((policies) => {
+      this.policies = policies;
+    });
+  }
+
+  private loadTrainings(departmentId: number) {
+    this.trainingService.getTrainingsByDepartmentId(departmentId).subscribe((trainings) => {
+      this.trainings = trainings;
+    });
+  }
+
+  onSubmit(): void {
+    if (this.departmentForm.valid) {
+      const formValue = this.departmentForm.value;
+      this.departmentService.updateDepartment(formValue.departmentId, formValue).subscribe(
+        (result) => {
+          console.log('Department updated successfully:', result);
+        },
+        (error) => {
+          console.error('Error updating department:', error);
+        }
+      );
+    }
   }
 }
