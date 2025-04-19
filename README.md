@@ -28,4 +28,8 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 # ProjetPi
 # version-aid
 # frontendaid
+<<<<<<< HEAD
 # amani
+=======
+# pointage
+>>>>>>> c860d4bae37f90052c60460684f59e424721685a
