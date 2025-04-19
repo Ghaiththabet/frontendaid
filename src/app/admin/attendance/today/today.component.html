@@ -1,235 +1,115 @@
 <section class="content">
   <div class="content-block">
     <div class="block-header">
-      <!-- breadcrumb -->
-      <app-breadcrumb [title]="'Today Attendance'" [items]="['Attendance']" [active_item]="'Today'">
+      <app-breadcrumb [title]="'Historique des Pointages'" [items]="['Pointages']" [active_item]="'Historique'">
       </app-breadcrumb>
     </div>
     <div class="row">
       <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
         <div class="card">
           <div class="materialTableHeader">
+            <!-- ... partie gauche (titre, recherche) ... -->
             <div class="left">
-              <ul class="header-buttons-left ms-0">
-                <li class="tbl-title">
-                  <h2>Attendance</h2>
-                </li>
-                <li class="tbl-search-box">
-                  <label for="search-input"><i class="material-icons search-icon">search</i></label>
-                  <input placeholder="Search" type="text" #filter (keyup)="applyFilter($event)"
-                    class="browser-default search-field" aria-label="Search box">
-                </li>
-              </ul>
+                 <ul class="header-buttons-left ms-0">
+                    <li class="tbl-title"> <h2>Historique</h2> </li>
+                    <li class="tbl-search-box">
+                        <label for="search-input"><i class="material-icons search-icon">search</i></label>
+                        <input placeholder="Rechercher..." type="text" #filter (keyup)="applyFilter($event)"
+                              class="browser-default search-field" aria-label="Search box">
+                    </li>
+                  </ul>
             </div>
+
             <div class="right">
               <ul class="tbl-export-btn">
+                <!-- Filtre colonnes CORRIGÉ -->
                 <li class="tbl-header-btn">
-                  <div class="m-l-10">
-                    <button mat-icon-button color="primary" (click)="select.open()" matTooltip="Show/Hide Column">
-                      <mat-icon>filter_list</mat-icon>
-                      <mat-select #select [(ngModel)]="filter.value" style="width: 200px; display: table;"
-                        class="column-filter">
-                        <span class="table-column-label">Show/Hide Column</span>
-                        @for (cd of columnDefinitions; track cd; let i = $index) {
-                        <div>
-                          <mat-option>
-                            <mat-checkbox (click)="$event.stopPropagation()" [(ngModel)]="cd.visible" color="primary">
-                              {{cd.label}}
-                            </mat-checkbox>
-                          </mat-option>
-                        </div>
-                        }
-                      </mat-select>
-                    </button>
-                  </div>
+                   <div class="m-l-10" matTooltip="Afficher/Masquer Colonnes">
+                      <!-- Ce bouton ouvre le menu MatSelect caché -->
+                      <button mat-icon-button (click)="select.open()">
+                         <mat-icon>filter_list</mat-icon>
+                      </button>
+                      <!-- Le MatSelect est juste là pour contenir les options -->
+                      <mat-select #select multiple style="display: none;">
+                        <!-- Pas de [(ngModel)] ici -->
+                         <div class="mat-select-header" style="padding: 8px 16px; font-weight: bold; border-bottom: 1px solid #ccc;">Afficher/Masquer Colonnes</div>
+                         @for (cd of columnDefinitions; track cd.def) {
+                           <!-- Utiliser mat-option pour l'accessibilité clavier, mais on contrôle la logique avec checkbox -->
+                           <mat-option style="height: auto; padding: 0;"> <!-- Style pour ne pas imposer hauteur -->
+                              <!-- Le checkbox contrôle directement la propriété 'visible' -->
+                              <mat-checkbox [(ngModel)]="cd.visible"
+                                            color="primary"
+                                            style="padding: 8px 16px; width: 100%; box-sizing: border-box;"
+                                            (ngModelChange)="onColumnVisibilityChange()"> <!-- Ajouté pour OnPush si besoin -->
+                                  {{ cd.label }}
+                              </mat-checkbox>
+                           </mat-option>
+                         }
+                       </mat-select>
+                   </div>
                 </li>
-                <li class="tbl-header-btn">
-                  <div class="m-l-10">
-                    <button mat-icon-button (click)="addNew()" class="col-green" matTooltip="Add">
-                      <mat-icon>add_circle_outline</mat-icon>
-                    </button>
-                  </div>
-                </li>
-                <li class="tbl-header-btn">
-                  <div class="m-l-10">
-                    <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
-                      <mat-icon>refresh</mat-icon>
-                    </button>
-                  </div>
-                </li>
-                <li class="tbl-header-btn">
-                  <div class="m-l-10" [hidden]=!selection.hasValue()>
-                    <button mat-icon-button [hidden]=!selection.hasValue() (click)="removeSelectedRows()"
-                      class="col-red" matTooltip="Delete">
-                      <mat-icon>delete_outline</mat-icon>
-                    </button>
-                  </div>
-                </li>
-                <li>
-                  <div class="export-button m-l-10">
-                    <button mat-icon-button (click)="exportExcel()" class="col-blue" matTooltip="Xlsx Download">
-                      <mat-icon class="material-icons-outlined">file_download</mat-icon>
-                    </button>
-                  </div>
-                </li>
+                <!-- ... autres boutons (Refresh, Export) ... -->
+                 <li class="tbl-header-btn"><div class="m-l-10"><button mat-icon-button (click)="refresh()" matTooltip="Actualiser"><mat-icon>refresh</mat-icon></button></div></li>
+                 <li><div class="export-button m-l-10"><button mat-icon-button (click)="exportExcel()" class="col-blue" matTooltip="Exporter Excel"><mat-icon class="material-icons-outlined">file_download</mat-icon></button></div></li>
+
               </ul>
             </div>
           </div>
-          <div class="overflow-auto">
+
+          <!-- Reste de la table (pas de changements nécessaires ici) -->
+          <div class="body">
             <div class="responsive_table">
-              <table mat-table [dataSource]="dataSource" matSort class="mat-cell advance-table">
-                <!-- Checkbox Column -->
-                <ng-container matColumnDef="select">
-                  <mat-header-cell *matHeaderCellDef>
-                    <mat-checkbox (change)="$event ? masterToggle() : null"
-                      [checked]="selection.hasValue() && isAllSelected()" color="primary"
-                      [indeterminate]="selection.hasValue() && !isAllSelected()" [ngClass]="'tbl-checkbox'">
-                    </mat-checkbox>
-                  </mat-header-cell>
-                  <mat-cell *matCellDef="let row">
-                    <mat-checkbox (click)="$event.stopPropagation()" (change)="$event ? selection.toggle(row) : null"
-                      [checked]="selection.isSelected(row)" [ngClass]="'tbl-checkbox'" color="primary">
-                    </mat-checkbox>
-                  </mat-cell>
-                </ng-container>
-                @for (column of columnDefinitions; track column) {
-                <!-- Skip rendering if column.label is "select" or "action" -->
-                @if (column.type === 'check' || column.type === 'actionBtn') {
-                <!-- Skip this column -->
-                } @else {
-                @if (column.def === 'name') {
-                <ng-container [matColumnDef]="column.def">
-                  <mat-header-cell *matHeaderCellDef mat-sort-header>
-                    <span class="truncate-text">{{ column.label }}</span>
-                  </mat-header-cell>
-                  <mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)" [matTooltip]="row.name">
-                    <span class="mobile-label">{{ column.label }}:</span>
-                    <img [src]="row.img" class="table-img" alt="image" />
-                    <span class="truncate-text">
-                      {{ row.name }}
-                    </span>
-                  </mat-cell>
-                </ng-container>
-                } @else {
-                @if (column.def === 'status') {
-                <ng-container [matColumnDef]="column.def">
-                  <mat-header-cell *matHeaderCellDef mat-sort-header> <span class="truncate-text">{{ column.label
-                      }}</span></mat-header-cell>
-                  <mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)">
-                    <span class="mobile-label">{{ column.label }}:</span>
-                    <div>
-                      @switch (row.status) {
-                      @case ('present') {
-                      <div>
-                        <span class="badge badge-solid-green">{{ row.status }}</span>
-                      </div>
+              <div class="outer_table">
+                <table mat-table [dataSource]="dataSource" matSort class="mat-cell advance-table">
+                   <!-- Définitions @for (column of columnDefinitions...) etc. comme avant -->
+                     @for (column of columnDefinitions; track column.def) {
+                         @if (column.def === 'select' || column.def === 'actions') { }
+                         @else if (column.def === 'employeeFullName') {
+                           <ng-container [matColumnDef]="column.def"><mat-header-cell *matHeaderCellDef mat-sort-header>{{ column.label }}</mat-header-cell><mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)"><span class="mobile-label">{{ column.label }}:</span><span>{{ row.employeeFullName }}</span></mat-cell></ng-container>
+                         }
+                         @else if (column.type === 'datetime') {
+                           <ng-container [matColumnDef]="column.def"><mat-header-cell *matHeaderCellDef mat-sort-header>{{ column.label }}</mat-header-cell><mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)"><span class="mobile-label">{{ column.label }}:</span><span>{{ row[column.def] | date:'yyyy-MM-dd HH:mm' }}</span></mat-cell></ng-container>
+                         }
+                         @else if (column.type === 'duration') {
+                           <ng-container [matColumnDef]="column.def"><mat-header-cell *matHeaderCellDef mat-sort-header>{{ column.label }} (min)</mat-header-cell><mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)"><span class="mobile-label">{{ column.label }}:</span><span>{{ row[column.def] || 0 }} min</span></mat-cell></ng-container>
+                         }
+                         @else if (column.type === 'address') {
+                          <ng-container [matColumnDef]="column.def">
+                            <mat-header-cell *matHeaderCellDef mat-sort-header>
+                               {{ column.label }}
+                             </mat-header-cell>
+                            <mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)" [matTooltip]="row[column.def]?.adresseComplete || '-'"> <!-- Tooltip pour adresse complète -->
+                               <span class="mobile-label">{{ column.label }}:</span>
+                                <!-- Accès à l'adresse complète via la bonne clé d'objet -->
+                                <!-- Utilise l'optional chaining (?) au cas où l'objet localisationDebut/Fin ou adresseComplete serait absent -->
+                               <span class="truncate-text"> <!-- Peut-être ajouter une classe pour tronquer si l'adresse est longue -->
+                                 {{ (column.def === 'localisationDebutAdresse' ? row.localisationDebut?.adresseComplete : row.localisationFin?.adresseComplete) || '-' }}
+                               </span>
+                            </mat-cell>
+                          </ng-container>
                       }
-                      @case ('absent') {
-                      <div>
-                        <span class="badge badge-solid-orange">{{ row.status }}</span>
-                      </div>
-                      }
-                      }
-                    </div>
-                  </mat-cell>
-                </ng-container>
-                } @else {
-                <ng-container [matColumnDef]="column.def">
-                  <mat-header-cell *matHeaderCellDef mat-sort-header>
-                    <span class="truncate-text">{{ column.label }}</span>
-                  </mat-header-cell>
-                  <mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)">
-                    <span class="mobile-label">{{ column.label }}:</span>
-                    <span class="truncate-text">{{ row[column.def] }}</span>
-                  </mat-cell>
-                </ng-container>
-                }
-                }
-                }
-                }
+                          @else {
+                           <ng-container [matColumnDef]="column.def"><mat-header-cell *matHeaderCellDef mat-sort-header>{{ column.label }}</mat-header-cell><mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)"><span class="mobile-label">{{ column.label }}:</span><span>{{ row[column.def] || '-' }}</span></mat-cell></ng-container>
+                         }
+                         
+                         
+                     }
+                   <!-- FIN @for -->
 
-                <!-- actions -->
-                <ng-container matColumnDef="actions">
-                  <mat-header-cell class="pr-0" *matHeaderCellDef>Actions</mat-header-cell>
-                  <mat-cell *matCellDef="let row; let i=index;" class="pr-0">
-                    <button mat-icon-button color="accent" (click)="$event.stopPropagation()" (click)="editCall(row)"
-                      class="tbl-action-btn">
-                      <app-feather-icons [icon]="'edit'" [class]="'tbl-fav-edit'"></app-feather-icons>
-                    </button>
-                    <button mat-icon-button color="accent" (click)="$event.stopPropagation()" (click)="deleteItem(row)"
-                      class="tbl-action-btn">
-                      <app-feather-icons [icon]="'trash-2'" [class]="'tbl-fav-delete'"></app-feather-icons>
-                    </button>
-                  </mat-cell>
-                </ng-container>
-                <mat-header-row *matHeaderRowDef="getDisplayedColumns()"></mat-header-row>
-                <mat-row [@rowsAnimation]="" *matRowDef="let row; columns: getDisplayedColumns();"
-                  (click)="editCall(row)" [style.cursor]="'pointer'" matRipple>
-                </mat-row>
-              </table>
-              <!-- Loading spinner -->
-              @if (isLoading) {
-              <div class="tbl-spinner">
-                <mat-progress-spinner color="primary" [diameter]="40" mode="indeterminate">
-                </mat-progress-spinner>
+                  <mat-header-row *matHeaderRowDef="getDisplayedColumns()"></mat-header-row>
+                  <mat-row [@rowsAnimation]="" *matRowDef="let row; columns: getDisplayedColumns();"
+                           (contextmenu)="onContextMenu($event, row)" [style.cursor]="'context-menu'" matRipple>
+                  </mat-row>
+                </table>
               </div>
-              }
-              <!-- context menu start -->
-              <div style="visibility: hidden; position: fixed" [style.left]="contextMenuPosition.x"
-                [style.top]="contextMenuPosition.y" [matMenuTriggerFor]="contextMenu">
-              </div>
-              <mat-menu #contextMenu="matMenu">
-                <ng-template matMenuContent let-item="item">
-                  <button mat-menu-item (click)="addNew()">
-                    <mat-icon>add_box</mat-icon>
-                    <span>Add Record</span>
-                  </button>
-                  <button mat-menu-item (click)="editCall(item)">
-                    <mat-icon>create</mat-icon>
-                    <span>Edit Record</span>
-                  </button>
-                  <button mat-menu-item (click)="deleteItem(item)">
-                    <mat-icon>delete</mat-icon>
-                    <span>Delete Record</span>
-                  </button>
-                  <button mat-menu-item (click)="refresh()">
-                    <mat-icon>refresh</mat-icon>
-                    <span>Refresh Record</span>
-                  </button>
-                  <button mat-menu-item disabled>
-                    <mat-icon>no_encryption</mat-icon>
-                    <span>Disable</span>
-                  </button>
-                  <button mat-menu-item [matMenuTriggerFor]="nestedmenu">
-                    <mat-icon>list_alt</mat-icon>
-                    <span> Nested Menu</span>
-                  </button>
-                </ng-template>
-              </mat-menu>
-              <mat-menu #nestedmenu="matMenu">
-                <button mat-menu-item>
-                  <mat-icon>mail_outline</mat-icon>
-                  <span>Item 1</span>
-                </button>
-                <button mat-menu-item>
-                  <mat-icon>call</mat-icon>
-                  <span>Item 2</span>
-                </button>
-                <button mat-menu-item>
-                  <mat-icon>chat</mat-icon>
-                  <span>Item 3</span>
-                </button>
-              </mat-menu>
-              <!-- context menu end -->
 
-              @if (isLoading) {
-              <div class="no-results" [style.display]="dataSource.data.length === 0 ? '' : 'none'">
-                No results
-              </div>
-              }
-              <mat-paginator #paginator [length]="dataSource.filteredData.length" [pageIndex]="0" [pageSize]="10"
-                [pageSizeOptions]="[5, 10, 25, 100]">
-              </mat-paginator>
+               <!-- Spinner, Menu contextuel, "Aucun résultat", Paginateur -->
+              @if (isLoading) { <div class="tbl-spinner"><mat-progress-spinner color="primary" [diameter]="40" mode="indeterminate"></mat-progress-spinner></div> }
+              <div style="visibility: hidden; position: fixed" [style.left]="contextMenuPosition.x" [style.top]="contextMenuPosition.y" [matMenuTriggerFor]="contextMenu"></div>
+              <mat-menu #contextMenu="matMenu"><ng-template matMenuContent let-item="item"><button mat-menu-item (click)="viewDetails(item)"><mat-icon>visibility</mat-icon><span>Voir Détails</span></button><button mat-menu-item (click)="refresh()"><mat-icon>refresh</mat-icon><span>Actualiser</span></button></ng-template></mat-menu>
+               @if (!isLoading && dataSource.data.length === 0) { <div class="no-results"> Aucun pointage trouvé. </div> }
+               @if (dataSource.data.length > 0) { <mat-paginator #paginator [length]="dataSource.filteredData.length" [pageIndex]="0" [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 100]" showFirstLastButtons></mat-paginator> }
+
             </div>
           </div>
         </div>

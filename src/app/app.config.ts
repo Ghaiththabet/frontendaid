@@ -11,8 +11,15 @@ import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { IconsModule } from './shared/icons.module';
-import { AuthInterceptor } from './interceptor/auth.interceptor';
+import { AuthInterceptor } from 'app/core/interceptor/auth.interceptor';
+import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
+import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { HttpClient } from '@angular/common/http';
+import { HttpInterceptorFn } from '@angular/common/http';
 
+export function HttpLoaderFactory(http: HttpClient) {
+  return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+}
 export const MY_FORMATS = {
   parse: {
     dateInput: 'DD/MM/YYYY',
@@ -29,14 +36,20 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(APP_ROUTE),
     // Utilisation des intercepteurs via DI :
-    provideHttpClient(withInterceptorsFromDi()),
     provideAnimations(),
     { provide: LocationStrategy, useClass: HashLocationStrategy },
     { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
     { provide: DateAdapter, useClass: MomentDateAdapter, deps: [MAT_DATE_LOCALE] },
     { provide: MAT_DATE_FORMATS, useValue: MY_FORMATS },
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     importProvidersFrom(
+      TranslateModule.forRoot({
+        defaultLanguage: 'en',
+        loader: {
+          provide: TranslateLoader,
+          useFactory: HttpLoaderFactory,
+          deps: [HttpClient]
+        }
+      }),
       BrowserModule,
       BrowserAnimationsModule,
       MatSidenavModule,

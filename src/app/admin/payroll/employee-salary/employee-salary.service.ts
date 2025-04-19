@@ -1,67 +1,43 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError, map } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { EmployeeSalary } from './employee-salary.model';
+import { map } from 'rxjs/operators';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class EmployeeSalaryService {
-  private readonly API_URL = 'assets/data/employee-salary.json';
+  private apiUrl = 'http://localhost:8083/api/payrolls';
 
-  constructor(private httpClient: HttpClient) {}
+  constructor(private http: HttpClient) {}
 
-  /** GET: Fetch all employee salaries */
-  getAllEmployeeSalaries(): Observable<EmployeeSalary[]> {
-    return this.httpClient
-      .get<EmployeeSalary[]>(this.API_URL)
-      .pipe(catchError(this.handleError));
-  }
-
-  /** POST: Add a new employee salary */
-  addEmployeeSalary(
-    employeeSalary: EmployeeSalary
-  ): Observable<EmployeeSalary> {
-    return this.httpClient
-      .post<EmployeeSalary>(this.API_URL, employeeSalary)
-      .pipe(
-        map(() => {
-          return employeeSalary; // Return the newly added employee salary
-        }),
-        catchError(this.handleError)
-      );
-  }
-
-  /** PUT: Update an existing employee salary */
-  updateEmployeeSalary(
-    employeeSalary: EmployeeSalary
-  ): Observable<EmployeeSalary> {
-    return this.httpClient
-      .put<EmployeeSalary>(`${this.API_URL}`, employeeSalary) // Ensure to use the correct endpoint as per your API
-      .pipe(
-        map(() => {
-          return employeeSalary; // Return the updated employee salary
-        }),
-        catchError(this.handleError)
-      );
-  }
-
-  /** DELETE: Remove an employee salary by ID */
-  deleteEmployeeSalary(id: number): Observable<number> {
-    return this.httpClient.delete<void>(`${this.API_URL}`).pipe(
-      map(() => {
-        return id; // Return the ID of the deleted employee salary
-      }),
-      catchError(this.handleError)
+  getAll(): Observable<EmployeeSalary[]> {
+    return this.http.get<any[]>(this.apiUrl).pipe(
+      map((data) =>
+        data.map((item) => ({
+          payrollId: item.payrollId,
+          employeeId: item.employeeId,
+          employeeName: item.employeeName,
+          employeeDepartment: item.employeeDepartment,
+          basicSalary: item.baseSalary, // attention à baseSalary ici
+          bonuses: item.bonuses,
+          deductions: item.deductions,
+          totalSalary: item.totalSalary,
+          payDate: item.payDate
+        }))
+      )
     );
   }
+  
 
-  /** Handle Http operation that failed */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    console.error('An error occurred:', error.message);
-    return throwError(
-      () => new Error('Something went wrong; please try again later.')
-    );
+  add(payload: EmployeeSalary): Observable<EmployeeSalary> {
+    return this.http.post<EmployeeSalary>(this.apiUrl, payload);
+  }
+
+  update(payload: EmployeeSalary): Observable<EmployeeSalary> {
+    return this.http.put<EmployeeSalary>(`${this.apiUrl}/${payload.payrollId}`, payload);
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }

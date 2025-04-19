@@ -1,73 +1,50 @@
+// sidebar.component.ts
+import {
+  Component,
+  OnInit,
+  Inject,
+  ElementRef,
+  Renderer2,
+  HostListener
+} from '@angular/core';
 import {
   Router,
   NavigationEnd,
   RouterLinkActive,
-  RouterLink,
+  RouterLink
 } from '@angular/router';
-import { DOCUMENT, NgClass } from '@angular/common';
-import {
-  Component,
-  Inject,
-  ElementRef,
-  OnInit,
-  Renderer2,
-  HostListener,
-} from '@angular/core';
-import { AuthService, Role } from '@core';
-import { RouteInfo } from './sidebar.metadata';
-import { UnsubscribeOnDestroyAdapter } from '@shared';
-import { SidebarService } from './sidebar.service';
+import { DOCUMENT, CommonModule, NgClass } from '@angular/common';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { NgScrollbarModule } from 'ngx-scrollbar';
-import { CommonModule } from '@angular/common';
+import { UnsubscribeOnDestroyAdapter } from '@shared';
+import { AuthService, Role } from '@core';
+import { SidebarService } from './sidebar.service';
+import { RouteInfo } from './sidebar.metadata';
 
-
-
-// Si vous n’avez pas besoin de traduire directement dans ce composant,
-// vous pouvez supprimer TranslateModule et FeatherModule des 'imports'.
 @Component({
   standalone: true,
   selector: 'app-sidebar',
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss'],
-  // Gardez seulement ce dont vous avez besoin.
-  // Par exemple, si vous n'utilisez pas le pipe 'translate' ici,
-  // vous n'êtes pas obligé d'importer TranslateModule.
   imports: [
     CommonModule,
     RouterLinkActive,
     RouterLink,
     NgClass,
     NgScrollbarModule,
-    // NgScrollbar si vous utilisez <ng-scrollbar> dans le template
-    // Sinon, commentez-le.
-    // NgScrollbar,
-    // FeatherModule,
-    // TranslateModule,
+    TranslateModule
   ]
 })
-export class SidebarComponent
-  extends UnsubscribeOnDestroyAdapter
-  implements OnInit
-{
-  // Tableau d'objets décrivant les liens du menu
+export class SidebarComponent extends UnsubscribeOnDestroyAdapter implements OnInit {
   public sidebarItems!: RouteInfo[];
-
-  // Hauteur calculée de la fenêtre (pour scrollbar)
   public innerHeight?: number;
-
-  // Référence au body pour manipuler les classes
   public bodyTag!: HTMLElement;
-
-  listMaxHeight?: string;
-  listMaxWidth?: string;
-
-  // Infos utilisateur
-  userFullName?: string;
-  userImg?: string;
-  userType?: string;
-
-  // Hauteur de l’en-tête (pour le calcul d’espace)
-  headerHeight = 60;
+  public listMaxHeight?: string;
+  public listMaxWidth?: string;
+  public userFullName?: string;
+  public userImg?: string;
+  public userType?: string;
+  public headerHeight = 60;
 
   constructor(
     @Inject(DOCUMENT) private document: Document,
@@ -75,19 +52,21 @@ export class SidebarComponent
     public elementRef: ElementRef,
     private authService: AuthService,
     private router: Router,
-    private sidebarService: SidebarService
+    private sidebarService: SidebarService,
+    public translate: TranslateService
   ) {
     super();
+    const lang = localStorage.getItem('lang') || 'en';
+    translate.setDefaultLang(lang);
+    translate.use(lang);
   }
 
-  // Détecter les changements de taille de fenêtre
   @HostListener('window:resize', ['$event'])
   windowResizecall() {
     this.setMenuHeight();
     this.checkStatuForResize(false);
   }
 
-  // Fermer le menu si clic à l'extérieur
   @HostListener('document:mousedown', ['$event'])
   onGlobalClick(event: Event): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {
@@ -95,54 +74,35 @@ export class SidebarComponent
     }
   }
 
-  ngOnInit() {
-    // Stocker la référence au <body>
+  ngOnInit(): void {
     this.bodyTag = this.document.body;
-
-    // Récupérer l’utilisateur connecté
     if (this.authService.currentUserValue) {
       const user = this.authService.currentUserValue;
       const userRole = user.role;
 
       this.userFullName = user.firstName + ' ' + user.lastName;
-      // Image par défaut si user.img n’est pas défini
       this.userImg = user.img || 'assets/images/user/user.jpg';
 
-      // Déterminer le "type" en fonction du rôle
-      if (userRole === Role.Admin) {
-        this.userType = 'Admin';
-      } else if (userRole === Role.Client) {
-        this.userType = 'Client';
-      } else if (userRole === Role.Employee) {
-        this.userType = 'Employee';
-      } else {
-        // Valeur par défaut
-        this.userType = 'Admin';
-      }
+      if (userRole === Role.Admin) this.userType = 'Admin';
+      else if (userRole === Role.Client) this.userType = 'Client';
+      else if (userRole === Role.Employee) this.userType = 'Employee';
+      else this.userType = 'User';
 
-      // Charger la liste des routes (menu) depuis le service
-      this.subs.sink = this.sidebarService.getRouteInfo()
-        .subscribe((routes: RouteInfo[]) => {
-          // Filtrer selon le rôle
-          this.sidebarItems = routes.filter(
-            (x) =>
-              x.role.indexOf(userRole) !== -1 || x.role.indexOf('All') !== -1
-          );
-        });
+      this.subs.sink = this.sidebarService.getRouteInfo().subscribe((routes: RouteInfo[]) => {
+        this.sidebarItems = routes.filter(
+          (x) => x.role.includes(userRole) || x.role.includes('All')
+        );
+      });
     }
 
-    // Initialiser la sidebar
     this.initLeftSidebar();
   }
 
   initLeftSidebar() {
     this.setMenuHeight();
     this.checkStatuForResize(true);
-
-    // Écouter les événements de navigation
     this.subs.sink = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        // Sur mobile, refermer le menu après navigation
         this.renderer.removeClass(this.document.body, 'overlay-open');
       }
     });
@@ -155,7 +115,6 @@ export class SidebarComponent
     this.listMaxWidth = '500px';
   }
 
-  // Vérifier si le menu doit être "fermé" sur les petits écrans
   checkStatuForResize(firstTime: boolean) {
     if (window.innerWidth < 1025) {
       this.renderer.addClass(this.document.body, 'ls-closed');
@@ -164,7 +123,6 @@ export class SidebarComponent
     }
   }
 
-  // Survol de la sidebar (quand le menu est réduit)
   mouseHover() {
     const body = this.elementRef.nativeElement.closest('body');
     if (body.classList.contains('submenu-closed')) {
@@ -181,10 +139,9 @@ export class SidebarComponent
     }
   }
 
-  // Cliquer sur un item qui a un sous-menu
-  callToggleMenu(event: Event, length: number) {
+  callToggleMenu(event: Event, length: number): void {
     if (length > 0) {
-      const parentElement = (event.target as HTMLInputElement).closest('li');
+      const parentElement = (event.target as HTMLElement).closest('li');
       const activeClass = parentElement?.classList.contains('active');
       if (activeClass) {
         this.renderer.removeClass(parentElement, 'active');
@@ -194,15 +151,10 @@ export class SidebarComponent
     }
   }
 
-  // Déconnexion
-  logout() {
+  logout(): void {
     this.authService.logout().subscribe({
-      next: () => {
-        this.router.navigate(['/authentication/signin']);
-      },
-      error: (error) => {
-        console.error('Erreur lors de la déconnexion:', error);
-      },
+      next: () => this.router.navigate(['/authentication/signin']),
+      error: (err) => console.error('Erreur lors de la déconnexion:', err)
     });
   }
 }

@@ -1,11 +1,10 @@
 <div class="addContainer">
+  <!-- Formulaire pour Ajouter ou Modifier -->
   @if (!isDetails) {
   <div class="contact-form">
     <div class="modalHeader">
       <div class="avatarDetails">
-        <label class="hoverable" for="tableFileInput">
-          <img [src]='leaves.img' alt="avatar">
-        </label>
+         <img [src]="leaves.img || 'assets/images/user/user.png'" alt="avatar">
         <div class="modalTitle">
           {{dialogTitle}}
         </div>
@@ -16,113 +15,158 @@
     </div>
     <div mat-dialog-content>
       <form class="register-form m-4" [formGroup]="leavesForm" (ngSubmit)="submit()">
+        <!-- Employee Row -->
         <div class="row">
+          <!-- Employee Selection -->
           <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
             <mat-form-field class="example-full-width mb-3" appearance="outline">
-              <mat-label>Name</mat-label>
-              <input matInput formControlName="name" required>
-              @if (leavesForm.get('name')?.hasError('required')) {
-              <mat-error>Name is required</mat-error>
+              <mat-label>Employee</mat-label>
+              <mat-select formControlName="employeeId" required [disabled]="action === 'edit'"> <!-- Disable if editing -->
+                @if (isEmployeeListLoading) {
+                  <mat-option disabled><mat-spinner diameter="20"></mat-spinner> Loading...</mat-option>
+                } @else if (employeeListError) {
+                  <mat-option disabled class="error-message">{{ employeeListError }}</mat-option>
+                } @else {
+                  @for (employee of employees; track employee.id) {
+                    <mat-option [value]="employee.id">{{ employee.fullName }}</mat-option>
+                  }
+                  @if (employees.length === 0 && !isEmployeeListLoading) {
+                    <mat-option disabled>No employees found</mat-option>
+                  }
+                }
+              </mat-select>
+              @if (leavesForm.get('employeeId')?.hasError('required') && leavesForm.get('employeeId')?.touched) {
+              <mat-error>Please select an employee</mat-error>
               }
             </mat-form-field>
           </div>
+          <!-- Leave Type -->
           <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
             <mat-form-field class="example-full-width mb-3" appearance="outline">
               <mat-label>Leave Type</mat-label>
               <mat-select formControlName="type" required>
-                <mat-option [value]="'Sick Leave'">Sick Leave</mat-option>
-                <mat-option [value]="'Maternity Leave'">Maternity Leave</mat-option>
-                <mat-option [value]="'Casual Leave'">Casual Leave</mat-option>
-                <mat-option [value]="'Medical Leave'">Medical Leave</mat-option>
+                @for(type of leaveTypes; track type) {
+                  <mat-option [value]="type">{{ type | titlecase }}</mat-option> <!-- Use titlecase pipe for display -->
+                }
+                <!-- Or hardcode options like before -->
+                <!-- <mat-option value="ANNUAL">Annual Leave</mat-option> ... -->
               </mat-select>
-              @if (leavesForm.get('type')?.hasError('required') || leavesForm.get('type')?.touched) {
-              <mat-error>
-                Please select a leave type
-              </mat-error>
+              @if (leavesForm.get('type')?.hasError('required') && leavesForm.get('type')?.touched) {
+              <mat-error>Please select a leave type</mat-error>
               }
             </mat-form-field>
           </div>
         </div>
+
+        <!-- Date Row -->
         <div class="row">
+           <!-- Leave From Date -->
           <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
             <mat-form-field class="example-full-width mb-3" appearance="outline">
               <mat-label>Leave From</mat-label>
-              <input matInput [matDatepicker]="picker2" formControlName="from">
-              <mat-datepicker-toggle matSuffix [for]="picker2"></mat-datepicker-toggle>
-              <mat-datepicker #picker2></mat-datepicker>
-              @if (leavesForm.get('from')?.hasError('required')) {
-              <mat-error>Please select date</mat-error>
+              <input matInput [matDatepicker]="pickerFrom" formControlName="from" required>
+              <mat-datepicker-toggle matSuffix [for]="pickerFrom"></mat-datepicker-toggle>
+              <mat-datepicker #pickerFrom></mat-datepicker>
+              @if (leavesForm.get('from')?.hasError('required') && leavesForm.get('from')?.touched) {
+              <mat-error>Please select start date</mat-error>
               }
             </mat-form-field>
           </div>
+          <!-- Leave To Date -->
           <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
             <mat-form-field class="example-full-width mb-3" appearance="outline">
               <mat-label>Leave To</mat-label>
-              <input matInput [matDatepicker]="picker" formControlName="leaveTo">
-              <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-              <mat-datepicker #picker></mat-datepicker>
-              @if (leavesForm.get('leaveTo')?.hasError('required')) {
-              <mat-error>Please select date</mat-error>
+              <input matInput [matDatepicker]="pickerTo" formControlName="leaveTo" required>
+              <mat-datepicker-toggle matSuffix [for]="pickerTo"></mat-datepicker-toggle>
+              <mat-datepicker #pickerTo></mat-datepicker>
+              @if (leavesForm.get('leaveTo')?.hasError('required') && leavesForm.get('leaveTo')?.touched) {
+              <mat-error>Please select end date</mat-error>
+              }
+              @if (leavesForm.get('leaveTo')?.hasError('dateInvalid')) {
+              <mat-error>End date cannot be before start date</mat-error>
               }
             </mat-form-field>
           </div>
         </div>
+
+        <!-- Duration Row -->
         <div class="row">
-          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
-            <mat-form-field class="example-full-width mb-3" appearance="outline">
-              <mat-label>No Of Days</mat-label>
-              <input matInput formControlName="noOfDays" required>
-            </mat-form-field>
-          </div>
-          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
-            <mat-form-field class="example-full-width" appearance="outline">
-              <mat-label>Status</mat-label>
-              <mat-select formControlName="status" required>
-                <mat-option [value]="'Approved'">Approved</mat-option>
-                <mat-option [value]="'Rejected'">Rejected</mat-option>
-              </mat-select>
-              @if (leavesForm.get('status')?.hasError('required')) {
-              <mat-error>Status is required</mat-error>
-              }
-            </mat-form-field>
-          </div>
+           <!-- Duration Type -->
+           <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
+              <mat-form-field class="example-full-width mb-3" appearance="outline">
+                <mat-label>Duration Type</mat-label>
+                <mat-select formControlName="durationType" required>
+                   @for(dType of durationTypes; track dType) {
+                     <mat-option [value]="dType">{{ dType === 'FULL_DAY' ? 'Full Day' : 'Half Day' }}</mat-option>
+                   }
+                  <!-- <mat-option value="FULL_DAY">Full Day</mat-option>
+                  <mat-option value="HALF_DAY">Half Day</mat-option> -->
+                </mat-select>
+                @if (leavesForm.get('durationType')?.hasError('required')) {
+                  <mat-error>Duration type is required</mat-error>
+                }
+              </mat-form-field>
+            </div>
+            <!-- No Of Days (Readonly) -->
+            <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
+              <mat-form-field class="example-full-width mb-3" appearance="outline">
+                <mat-label>Number of Days</mat-label>
+                <input matInput formControlName="noOfDays" required readonly type="number" step="0.5">
+                <!-- Error messages kept -->
+                @if (leavesForm.get('noOfDays')?.hasError('required')) { <mat-error>Days required</mat-error> }
+                @if (leavesForm.get('noOfDays')?.hasError('min')) { <mat-error>Min 0.5 days</mat-error> }
+              </mat-form-field>
+            </div>
         </div>
-        <div class="row">
-          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
-            <mat-form-field class="example-full-width mb-3" appearance="outline">
-              <mat-label>Employee ID</mat-label>
-              <input matInput formControlName="employeeId" required>
-            </mat-form-field>
-          </div>
-          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
-            <mat-form-field class="example-full-width mb-3" appearance="outline">
-              <mat-label>Department</mat-label>
-              <input matInput formControlName="department" required>
-            </mat-form-field>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
-            <mat-form-field class="example-full-width mb-3" appearance="outline">
-              <mat-label>Duration Type</mat-label>
-              <input matInput formControlName="durationType" required>
-            </mat-form-field>
-          </div>
-          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
-            <mat-form-field class="example-full-width mb-3" appearance="outline">
-              <mat-label>Requested On</mat-label>
-              <input matInput formControlName="requestedOn" [readonly]="true">
-            </mat-form-field>
-          </div>
-        </div>
+
+        <!-- Info/Status Row -->
+         <div class="row">
+             <!-- Department (Readonly, auto-populated) -->
+             <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
+                <mat-form-field class="example-full-width mb-3" appearance="outline">
+                  <mat-label>Department (Info)</mat-label>
+                  <input matInput formControlName="department" readonly>
+                </mat-form-field>
+             </div>
+
+             <!-- *** Status Selection *** -->
+             <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 mb-2">
+                <mat-form-field class="example-full-width mb-3" appearance="outline">
+                    <mat-label>Status</mat-label>
+                    <!-- Change input to mat-select -->
+                    <mat-select formControlName="status" required>
+                       <!-- Loop through statuses array from component TS -->
+                       @for (stat of statuses; track stat) {
+                         <mat-option [value]="stat">{{ stat | titlecase }}</mat-option> <!-- Use titlecase pipe for display -->
+                       }
+                       <!-- Or hardcode options -->
+                       <!-- <mat-option value="PENDING">Pending</mat-option>
+                       <mat-option value="APPROVED">Approved</mat-option>
+                       <mat-option value="REJECTED">Rejected</mat-option> -->
+                    </mat-select>
+                    <!-- Add error message for required -->
+                    @if (leavesForm.get('status')?.hasError('required') && leavesForm.get('status')?.touched) {
+                      <mat-error>Status is required</mat-error>
+                    }
+                </mat-form-field>
+            </div>
+            <!-- *** End Status Selection *** -->
+         </div>
+
+        <!-- Reason -->
         <div class="row">
           <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 mb-2">
             <mat-form-field class="example-full-width mb-3" appearance="outline">
               <mat-label>Reason</mat-label>
-              <textarea matInput formControlName="reason"></textarea>
+              <textarea matInput formControlName="reason" required></textarea>
+              @if (leavesForm.get('reason')?.hasError('required') && leavesForm.get('reason')?.touched) {
+                <mat-error>Reason is required</mat-error>
+              }
             </mat-form-field>
           </div>
         </div>
+
+        <!-- Note -->
         <div class="row">
           <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 mb-2">
             <mat-form-field class="example-full-width mb-3" appearance="outline">
@@ -131,12 +175,16 @@
             </mat-form-field>
           </div>
         </div>
+
+        <!-- Buttons -->
         <div class="row">
           <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 mb-2">
             <div class="example-button-row">
-              <button mat-flat-button class="formSubmitBtn" [disabled]="!leavesForm.valid" [mat-dialog-close]="1"
-                type="submit">Save</button>
-              <button mat-flat-button mat-dialog-close class="formCancelBtn" tabindex="-1">Cancel</button>
+              <button mat-flat-button color="primary" class="formSubmitBtn" [disabled]="leavesForm.invalid || isLoading" type="submit">
+                 @if(isLoading) { <mat-spinner diameter="20"></mat-spinner> }
+                 Save
+              </button>
+              <button mat-flat-button color="warn" class="formCancelBtn" type="button" (click)="onNoClick()" tabindex="-1">Cancel</button>
             </div>
           </div>
         </div>
@@ -144,85 +192,104 @@
     </div>
   </div>
   }
+
+  <!-- Vue Détail (No changes needed here unless you want to adjust layout) -->
   @if (isDetails) {
-  <div class="contact-details">
-    <div class="modalHeader">
-      <div class="avatarDetails">
-        <label class="hoverable" for="tableFileInput">
-          <img [src]='leaves.img' alt="avatar">
-        </label>
-        <div class="modalTitle">
-          {{dialogTitle}}
-        </div>
-      </div>
-      <button mat-icon-button (click)="dialogRef.close()" class="modal-close-button" aria-label="Close dialog">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-    <div mat-dialog-content>
-      <mat-card-content>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">receipt</i>
-          <div class="contact-detail-info">{{leaves.type}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">today</i>
-          <div class="contact-detail-info">{{leaves.from | date: 'MMMM d, yyyy'}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">fact_check</i>
-          <div class="contact-detail-info">{{leaves.leaveTo | date: 'MMMM d, yyyy'}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">tag</i>
-          <div class="contact-detail-info">{{leaves.noOfDays}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">info</i>
-          <div class="contact-detail-info">{{leaves.status}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">description</i>
-          <div class="contact-detail-info">{{leaves.reason}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">note</i>
-          <div class="contact-detail-info">{{leaves.note}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">person</i>
-          <div class="contact-detail-info">{{leaves.employeeId}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">business</i>
-          <div class="contact-detail-info">{{leaves.department}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">access_time</i>
-          <div class="contact-detail-info">{{leaves.durationType}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">calendar_today</i>
-          <div class="contact-detail-info">{{leaves.requestedOn | date: 'MMMM d, yyyy'}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">person</i>
-          <div class="contact-detail-info">{{leaves.approvedBy}}</div>
-        </div>
-        <div class="contact-details-field m-b-30">
-          <i class="material-icons-outlined">calendar_today</i>
-          <div class="contact-detail-info">{{leaves.approvalDate | date: 'MMMM d, yyyy'}}</div>
-        </div>
-        <div class="row">
-          <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 mb-2">
-            <div class="example-button-row">
-              <button mat-flat-button color="primary" (click)="approve()">Approve</button>
-              <button mat-flat-button color="warn" (click)="reject()">Reject</button>
-            </div>
+    <!-- ... Keep the existing detail view code ... -->
+     <div class="contact-details">
+      <div class="modalHeader">
+         <div class="avatarDetails">
+           <img [src]="leaves.img || 'assets/images/user/user.png'" alt="avatar">
+          <div class="modalTitle">
+            {{dialogTitle}}
           </div>
         </div>
-      </mat-card-content>
+        <button mat-icon-button (click)="dialogRef.close()" class="modal-close-button" aria-label="Close dialog">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div mat-dialog-content>
+        <mat-card-content>
+           <div class="row">
+              <div class="col-6">
+                <div class="contact-details-field m-b-15">
+                    <i class="material-icons-outlined">badge</i> <strong>Employee:</strong>
+                    <div class="contact-detail-info">{{leaves.name}} (ID: {{leaves.employeeId}})</div> <!-- Show ID too -->
+                </div>
+                 <div class="contact-details-field m-b-15">
+                    <i class="material-icons-outlined">business</i> <strong>Department:</strong>
+                    <div class="contact-detail-info">{{leaves.department}}</div>
+                 </div>
+                 <div class="contact-details-field m-b-15">
+                    <i class="material-icons-outlined">receipt</i> <strong>Leave Type:</strong>
+                    <div class="contact-detail-info">{{leaves.type | titlecase}}</div> <!-- Use titlecase pipe maybe -->
+                 </div>
+                 <div class="contact-details-field m-b-15">
+                     <i class="material-icons-outlined">date_range</i> <strong>Period:</strong>
+                     <div class="contact-detail-info">From: {{leaves.from | date: 'dd/MM/yyyy'}} To: {{leaves.leaveTo | date: 'dd/MM/yyyy'}}</div>
+                 </div>
+                  <div class="contact-details-field m-b-15">
+                     <i class="material-icons-outlined">schedule</i> <strong>Duration:</strong>
+                     <div class="contact-detail-info">{{leaves.noOfDays}} day(s) ({{leaves.durationType === 'FULL_DAY' ? 'Full Day' : 'Half Day'}})</div>
+                 </div>
+                 <div class="contact-details-field m-b-15">
+                    <i class="material-icons-outlined">info</i> <strong>Status:</strong>
+                    <div class="contact-detail-info">{{leaves.status | titlecase}}</div>
+                 </div>
+              </div>
+              <div class="col-6">
+                 <div class="contact-details-field m-b-15">
+                    <i class="material-icons-outlined">calendar_today</i> <strong>Requested On:</strong>
+                    <div class="contact-detail-info">{{leaves.requestedOn | date: 'dd/MM/yyyy'}}</div>
+                 </div>
+                  <div class="contact-details-field m-b-15">
+                     <i class="material-icons-outlined">person_check</i> <strong>Approved By:</strong>
+                     <div class="contact-detail-info">{{leaves.approvedBy || 'N/A'}}</div>
+                 </div>
+                 <div class="contact-details-field m-b-15">
+                     <i class="material-icons-outlined">event_available</i> <strong>Approval Date:</strong>
+                     <div class="contact-detail-info">{{leaves.approvalDate | date: 'dd/MM/yyyy' }}</div>
+                 </div>
+                 <div class="contact-details-field m-b-15">
+                     <i class="material-icons-outlined">description</i> <strong>Reason:</strong>
+                     <div class="contact-detail-info reason-note">{{leaves.reason}}</div>
+                 </div>
+                 <div class="contact-details-field m-b-15">
+                     <i class="material-icons-outlined">note</i> <strong>Note:</strong>
+                     <div class="contact-detail-info reason-note">{{leaves.note || 'N/A'}}</div>
+                 </div>
+              </div>
+           </div>
+
+          @if (leaves.status === 'PENDING') {
+            <div class="row">
+              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 mb-2 text-center">
+                <div class="example-button-row">
+                  <button mat-flat-button color="primary" (click)="approve()" [disabled]="isLoading">
+                     @if(isLoading) { <mat-spinner diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner> }
+                     Approve
+                  </button>
+                  <button mat-flat-button color="warn" (click)="reject()" [disabled]="isLoading">
+                    @if(isLoading) { <mat-spinner diameter="20" style="display: inline-block; margin-right: 8px;"></mat-spinner> }
+                     Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </mat-card-content>
+      </div>
     </div>
-  </div>
   }
 </div>
+
+<!-- Styles (keep existing styles) -->
+<style>
+  .error-message { color: red; font-size: 0.8em; }
+  .reason-note { white-space: pre-wrap; word-break: break-word; }
+  .contact-details-field { display: flex; align-items: center; }
+ .contact-details-field i { margin-right: 10px; color: #666; }
+  .contact-details-field strong { margin-right: 5px; }
+  /* Center align spinner */
+  mat-option .mat-spinner { vertical-align: middle; }
+</style>

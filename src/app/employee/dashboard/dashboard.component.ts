@@ -1,5 +1,6 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+
 import {
   ChartComponent,
   ApexAxisChartSeries,
@@ -27,6 +28,11 @@ import { MatCardModule } from '@angular/material/card';
 import { EmpStatusComponent } from '@shared/components/emp-status/emp-status.component';
 import { TableCardComponent } from '@shared/components/table-card/table-card.component';
 import { TodoWidgetComponent } from '@shared/components/todo-widget/todo-widget.component';
+import { TimerService } from '../../services/timer.service';
+import { EntreeDeTempsService } from '../../services/entree-de-temps.service';
+import { EntreeDeTemps } from '../../models/EntreeDeTemps.model';
+import { MatDialog } from '@angular/material/dialog';
+import { AuthService } from '@core';
 
 interface Todo {
   title: string;
@@ -57,6 +63,7 @@ export type chartOptions = {
     selector: 'app-dashboard',
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.scss'],
+    standalone: true,
     imports: [
         BreadcrumbComponent,
         NgApexchartsModule,
@@ -71,16 +78,29 @@ export type chartOptions = {
         TodoWidgetComponent,
     ]
 })
-export class DashboardComponent implements OnInit {
-  @ViewChild('chart')
-  chart!: ChartComponent;
+export class DashboardComponent implements OnInit, OnDestroy {
+  @ViewChild('chart') chart!: ChartComponent;
+
+  // Time tracking properties
+  isTracking = false;
+  isPaused = false;
+  timer = '00:00:00';
+  currentEntreeDeTemps: EntreeDeTemps | null = null;
+  private timerSubscription: any;
+  userId: any = this.authService.currentUserValue?.id || '';
+
+  // Chart properties
   public barChartOptions!: Partial<chartOptions>;
   public radialChartOptions!: Partial<chartOptions>;
   public gaugeChartOptions!: Partial<chartOptions>;
   public stackBarChart!: Partial<chartOptions>;
-  constructor() {
-    // code here
-  }
+
+  constructor(
+    private timerService: TimerService,
+    private entreeDeTempsService: EntreeDeTempsService,
+    private dialog: MatDialog,
+    private authService: AuthService
+  ) {}
 
   // TODO start
   tasks: Todo[] = [
@@ -109,11 +129,62 @@ export class DashboardComponent implements OnInit {
   // TODO end
 
   ngOnInit() {
+    // Initialize time tracking
+    this.checkActivePointage();
+    this.subscribeToTimer();
+    // Initialize charts
+    
     this.chart1();
     this.chart2();
     this.gaugechart();
     this.stackChart();
   }
+
+  ngOnDestroy() {
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+    }
+  }
+
+  // Vérifier s'il existe un pointage actif dans TimerService
+  private checkActivePointage() {
+    const pointageId = this.timerService.currentPointageId$.value;
+    if (pointageId) {
+      this.isTracking = this.timerService.isTracking$.value;
+      this.isPaused = this.timerService.isPaused$.value;
+    }
+  }
+
+  // Abonnement au compteur (secondsElapsed$) afin de mettre à jour l'affichage du timer
+  private subscribeToTimer() {
+    this.timerSubscription = this.timerService.secondsElapsed$.subscribe(seconds => {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+      this.timer = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    });
+  }
+
+  // Charger l'analyse des temps pour l'utilisateur
+  
+
+  // Démarrer un nouveau pointage
+  openForm() {
+    const now = new Date();
+    const newPointage: EntreeDeTemps = {
+      employeeId: this.userId,
+      typeEntreeDeTemps: 'TRAVAIL',
+      heureDebut: now,
+      date: now,
+      restrictionsHorloge: 'FLEXIBLE',
+      status: 'EN_COURS',
+      notes: ''
+    };
+
+  }
+
+  // Mettre en pause le pointage en cours
+
   private chart1() {
     this.barChartOptions = {
       series: [

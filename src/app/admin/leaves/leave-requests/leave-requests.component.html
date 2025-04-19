@@ -124,33 +124,40 @@
                   </mat-cell>
                 </ng-container>
                 } @else {
+                <!-- Dans leave-requests.component.html -->
+
                 @if (column.def === 'status') {
-                <ng-container [matColumnDef]="column.def">
-                  <mat-header-cell *matHeaderCellDef mat-sort-header> <span class="truncate-text">{{ column.label
-                      }}</span></mat-header-cell>
-                  <mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)">
-                    <span class="mobile-label">{{ column.label }}:</span>
-                    <div>
-                      @switch (row.status) {
-                      @case ('Approved') {
+                  <ng-container [matColumnDef]="column.def">
+                    <mat-header-cell *matHeaderCellDef mat-sort-header> <span class="truncate-text">{{ column.label }}</span></mat-header-cell>
+                    <mat-cell *matCellDef="let row" (contextmenu)="onContextMenu($event, row)">
+                      <span class="mobile-label">{{ column.label }}:</span>
                       <div>
-                        <span class="badge badge-solid-green">{{ row.status }}</span>
+                        <!-- Affiche la valeur brute pour déboguer si besoin -->
+                        <!-- {{ row.status }} -->
+
+                        @switch (row.status) {
+                        @case ('APPROVED') {  <!-- Mettre en MAJUSCULES -->
+                          <div>
+                            <span class="badge badge-solid-green">{{ row.status }}</span> <!-- Optionnel: Afficher en majuscules ou le formater -->
+                          </div>
+                        }
+                        @case ('REJECTED') {  <!-- Mettre en MAJUSCULES -->
+                          <div>
+                            <span class="badge badge-solid-orange">{{ row.status }}</span>
+                          </div>
+                        }
+                        @case ('PENDING') {  <!-- Mettre en MAJUSCULES -->
+                          <div>
+                            <span class="badge badge-solid-purple">{{ row.status }}</span>
+                          </div>
+                        }
+                        @default { <!-- Ajout d'un cas par défaut pour voir les valeurs inattendues -->
+                          <span>{{ row.status }}</span> <!-- Affiche la valeur si elle ne correspond à aucun cas -->
+                        }
+                      }
                       </div>
-                      }
-                      @case ('Rejected') {
-                      <div>
-                        <span class="badge badge-solid-orange">{{ row.status }}</span>
-                      </div>
-                      }
-                      @case ('Pending') {
-                      <div>
-                        <span class="badge badge-solid-purple">{{ row.status }}</span>
-                      </div>
-                      }
-                      }
-                    </div>
-                  </mat-cell>
-                </ng-container>
+                    </mat-cell>
+                  </ng-container>
                 } @else {
                 <ng-container [matColumnDef]="column.def">
                   <mat-header-cell *matHeaderCellDef mat-sort-header>

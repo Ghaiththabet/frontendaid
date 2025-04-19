@@ -1,289 +1,130 @@
-import {
-  Component,
-  ElementRef,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-} from '@angular/core';
-import { EmployeeSalaryService } from './employee-salary.service';
-import { HttpClient } from '@angular/common/http';
-import { MatDialog } from '@angular/material/dialog';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
-import { EmployeeSalary } from './employee-salary.model';
-import {
-  MatSnackBar,
-  MatSnackBarHorizontalPosition,
-  MatSnackBarVerticalPosition,
-} from '@angular/material/snack-bar';
-import { MatMenuTrigger, MatMenuModule } from '@angular/material/menu';
-import { Subject } from 'rxjs';
-import { EmployeeSalaryFormComponent } from './dialogs/form-dialog/form-dialog.component';
-import { EmployeeSalaryDeleteComponent } from './dialogs/delete/delete.component';
-import { SelectionModel } from '@angular/cdk/collections';
-import { rowsAnimation } from '@shared';
-import { Direction } from '@angular/cdk/bidi';
-import { TableExportUtil } from '@shared';
-import { NgClass } from '@angular/common';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatRippleModule } from '@angular/material/core';
-import { FeatherIconsComponent } from '@shared/components/feather-icons/feather-icons.component';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatTableDataSource } from '@angular/material/table';
+import { EmployeeSalary } from './employee-salary.model';
+import { EmployeeSalaryService } from './employee-salary.service';
+import { SelectionModel } from '@angular/cdk/collections';
+import { EmployeeSalaryFormComponent } from './dialogs/form-dialog/form-dialog.component';
+
+// Import du composant Breadcrumb
 import { BreadcrumbComponent } from '@shared/components/breadcrumb/breadcrumb.component';
-import { MatSelectModule } from '@angular/material/select';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+// Import du module du spinner
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+// Import du module pour le tooltip
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-employee-salary',
+  standalone: true,
   templateUrl: './employee-salary.component.html',
   styleUrls: ['./employee-salary.component.scss'],
-  animations: [rowsAnimation],
   imports: [
-    BreadcrumbComponent,
-    FormsModule,
-    MatTooltipModule,
-    MatButtonModule,
-    MatIconModule,
+    CommonModule,
     MatTableModule,
-    MatSortModule,
-    NgClass,
-    MatCheckboxModule,
-    FeatherIconsComponent,
-    MatRippleModule,
-    MatSelectModule,
-    MatProgressSpinnerModule,
-    MatMenuModule,
     MatPaginatorModule,
-  ],
+    MatSortModule,
+    MatIconModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatDialogModule,
+    FormsModule,
+    ReactiveFormsModule,
+    MatSnackBarModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    EmployeeSalaryFormComponent,
+    BreadcrumbComponent,
+    MatProgressSpinnerModule,
+    MatTooltipModule
+  ]
 })
-export class EmployeeSalaryComponent implements OnInit, OnDestroy {
-  columnDefinitions = [
-    { def: 'select', label: 'Checkbox', type: 'check', visible: true },
-    { def: 'empID', label: 'Employee ID', type: 'text', visible: false },
-    { def: 'name', label: 'Employee Name', type: 'text', visible: true },
-    { def: 'email', label: 'Email', type: 'email', visible: true },
-    { def: 'role', label: 'Role', type: 'text', visible: false },
-    { def: 'department', label: 'Department', type: 'text', visible: true },
-    { def: 'salary', label: 'Salary', type: 'text', visible: true },
-    { def: 'bonus', label: 'Bonus', type: 'text', visible: true },
-    { def: 'deductions', label: 'Deductions', type: 'text', visible: true },
-    { def: 'netSalary', label: 'Net Salary', type: 'text', visible: true },
-    { def: 'payslip', label: 'Payslip', type: 'text', visible: true },
-    { def: 'actions', label: 'Actions', type: 'actionBtn', visible: true },
+export class EmployeeSalaryComponent implements OnInit {
+  displayedColumns: string[] = [
+    'employeeName',
+    'employeeDepartment',
+    'basicSalary',
+    'bonuses',
+    'deductions',
+    'totalSalary',
+    'payDate',
+    'actions'
   ];
 
   dataSource = new MatTableDataSource<EmployeeSalary>([]);
   selection = new SelectionModel<EmployeeSalary>(true, []);
-  contextMenuPosition = { x: '0px', y: '0px' };
-  isLoading = true;
-  private destroy$ = new Subject<void>();
+
+  // Propriété pour afficher le spinner de chargement
+  isLoading: boolean = false;
+  // Propriété pour gérer le décalage du contenu lorsque la sidebar est visible
+  isSidebarVisible: boolean = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild('filter') filter!: ElementRef;
-  @ViewChild(MatMenuTrigger) contextMenu?: MatMenuTrigger;
 
   constructor(
-    public httpClient: HttpClient,
-    public dialog: MatDialog,
-    private router: Router,
-    public employeeSalaryService: EmployeeSalaryService,
+    private salaryService: EmployeeSalaryService,
+    private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {}
 
-  ngOnInit() {
-    this.loadData();
+  ngOnInit(): void {
+    this.load();
   }
 
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  refresh() {
-    this.loadData();
-  }
-
-  getDisplayedColumns(): string[] {
-    return this.columnDefinitions
-      .filter((cd) => cd.visible)
-      .map((cd) => cd.def);
-  }
-  downloadCall() {
-    this.router.navigateByUrl('admin/payroll/payslip');
-  }
-
-  loadData() {
-    this.employeeSalaryService.getAllEmployeeSalaries().subscribe({
-      next: (data) => {
+  load(): void {
+    this.isLoading = true;
+    this.salaryService.getAll().subscribe(
+      (data) => {
         this.dataSource.data = data;
+        this.dataSource.paginator = this.paginator;
+        this.dataSource.sort = this.sort;
         this.isLoading = false;
-        this.refreshTable();
-        this.dataSource.filterPredicate = (
-          data: EmployeeSalary,
-          filter: string
-        ) =>
-          Object.values(data).some((value) =>
-            value.toString().toLowerCase().includes(filter)
-          );
       },
-      error: (err) => console.error(err),
-    });
+      error => {
+        console.error(error);
+        this.isLoading = false;
+      }
+    );
   }
 
-  private refreshTable() {
-    this.paginator.pageIndex = 0;
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+  applyFilter(event: Event): void {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.dataSource.filter = filterValue.trim().toLowerCase();
   }
 
-  applyFilter(event: Event) {
-    const filterValue = (event.target as HTMLInputElement).value
-      .trim()
-      .toLowerCase();
-    this.dataSource.filter = filterValue;
-  }
-
-  addNew() {
-    this.openDialog('add');
-  }
-
-  editCall(row: EmployeeSalary) {
-    this.openDialog('edit', row);
-  }
-
-  openDialog(action: 'add' | 'edit', data?: EmployeeSalary) {
-    let varDirection: Direction;
-    if (localStorage.getItem('isRtl') === 'true') {
-      varDirection = 'rtl';
-    } else {
-      varDirection = 'ltr';
-    }
+  openDialog(salary?: EmployeeSalary): void {
     const dialogRef = this.dialog.open(EmployeeSalaryFormComponent, {
-      width: '60vw',
-      maxWidth: '100vw',
-      data: { employeeSalary: data, action },
-      direction: varDirection,
-      autoFocus: false,
+      width: '600px',
+      data: salary || null
     });
-
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-        if (action === 'add') {
-          this.dataSource.data = [result, ...this.dataSource.data];
-        } else {
-          this.updateRecord(result);
-        }
-        this.refreshTable();
-        this.showNotification(
-          action === 'add' ? 'snackbar-success' : 'black',
-          `${action === 'add' ? 'Add' : 'Edit'} Record Successfully...!!!`,
-          'bottom',
-          'center'
-        );
+        this.load();
+        this.snackBar.open('Saved successfully', '', { duration: 2000 });
       }
     });
   }
 
-  private updateRecord(updatedRecord: EmployeeSalary) {
-    const index = this.dataSource.data.findIndex(
-      (record) => record.id === updatedRecord.id
-    );
-    if (index !== -1) {
-      this.dataSource.data[index] = updatedRecord;
-      this.dataSource._updateChangeSubscription();
-    }
-  }
-
-  deleteItem(row: EmployeeSalary) {
-    const dialogRef = this.dialog.open(EmployeeSalaryDeleteComponent, {
-      data: row,
+  delete(id: number): void {
+    this.salaryService.delete(id).subscribe(() => {
+      this.load();
+      this.snackBar.open('Deleted successfully', '', { duration: 2000 });
     });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.dataSource.data = this.dataSource.data.filter(
-          (record) => record.id !== row.id
-        );
-        this.refreshTable();
-        this.showNotification(
-          'snackbar-danger',
-          'Delete Record Successfully...!!!',
-          'bottom',
-          'center'
-        );
-      }
-    });
-  }
-
-  showNotification(
-    colorName: string,
-    text: string,
-    placementFrom: MatSnackBarVerticalPosition,
-    placementAlign: MatSnackBarHorizontalPosition
-  ) {
-    this.snackBar.open(text, '', {
-      duration: 2000,
-      verticalPosition: placementFrom,
-      horizontalPosition: placementAlign,
-      panelClass: colorName,
-    });
-  }
-
-  exportExcel() {
-    const exportData = this.dataSource.filteredData.map((x) => ({
-      'Employee Name': x.name,
-      Email: x.email,
-      Payslip: x.payslip,
-      Role: x.role,
-      'Employee ID': x.empID,
-      Department: x.department,
-      Salary: x.salary,
-      Bonus: x.bonus,
-      Deductions: x.deductions,
-      'Net Salary': x.netSalary,
-    }));
-
-    TableExportUtil.exportToExcel(exportData, 'employee_payslip_export');
-  }
-
-  isAllSelected() {
-    return this.selection.selected.length === this.dataSource.data.length;
-  }
-
-  masterToggle() {
-    this.isAllSelected()
-      ? this.selection.clear()
-      : this.dataSource.data.forEach((row) => this.selection.select(row));
-  }
-
-  removeSelectedRows() {
-    const totalSelect = this.selection.selected.length;
-    this.dataSource.data = this.dataSource.data.filter(
-      (item) => !this.selection.selected.includes(item)
-    );
-    this.selection.clear();
-    this.showNotification(
-      'snackbar-danger',
-      `${totalSelect} Record(s) Deleted Successfully...!!!`,
-      'bottom',
-      'center'
-    );
-  }
-  onContextMenu(event: MouseEvent, item: EmployeeSalary) {
-    event.preventDefault();
-    this.contextMenuPosition = {
-      x: `${event.clientX}px`,
-      y: `${event.clientY}px`,
-    };
-    if (this.contextMenu) {
-      this.contextMenu.menuData = { item };
-      this.contextMenu.menu?.focusFirstItem('mouse');
-      this.contextMenu.openMenu();
-    }
   }
 }
